@@ -1,0 +1,153 @@
+```{r global options, include=FALSE}
+#set root directory
+library(knitr)
+opts_knit$set(root.dir="E:/R/Data", echo=TRUE)
+```
+
+```{r}
+sessionInfo()
+```
+
+Read and summary of table
+```{r table, echo=TRUE, results='hide'} 
+
+activity <- read.csv("../Data/activity.csv", header=TRUE, as.is=TRUE, sep=",")
+summary(activity)
+```
+
+What is mean total number of steps taken per day?
+
+```{r date}
+activity$date <- as.Date(activity$date, "%Y-%m-%d")
+StepsSum<-aggregate(steps~date,activity, sum)
+hist(StepsSum$steps, xlab="Steps per Day", main="Histogram of Steps per Day")
+mean <- mean(StepsSum$steps, na.rm=T)
+mean
+```
+
+```{r}
+median <- median(StepsSum$steps, na.rm=T)
+median
+```
+
+What is the average daily activity pattern?
+
+```{r stepsINT}
+activity$interval <- as.factor(activity$interval)
+stepsINT <- aggregate(activity$steps,list(activity$interval), mean, na.rm=TRUE)
+names(stepsINT) <- c("interval", "steps")
+with(stepsINT, plot(interval, steps, type="l",  xlab="Interval Nr", ylab="Steps", main="Activity"))
+
+```
+
+
+```{r}
+ID <- stepsINT$interval[stepsINT$steps==max(stepsINT$steps)]
+```
+ID interval with max nr of steps `r ID`
+
+
+
+Number of rows with missing values
+
+```{r}
+nrow(activity[is.na(activity),])
+```
+
+NA's in steps set to 0
+```{r}
+a1 <- activity
+a1[is.na(a1$steps),]$steps <- 0
+activity2 <-a1
+```
+
+Mean steps per day
+```{r date2, echo=FALSE}
+date2 <- unique(activity$date)
+date2 <-as.character(date2)
+
+#str(date2)
+#summary(as.Date(date2))
+```
+
+Use mean for NA from tha day
+```{r}
+mean.a  <- NULL
+for (i in date2) {
+       mean.a[i] <- mean(activity2[activity2$date == i,]$steps)
+}
+```
+
+Plot
+
+```{r}
+library(ggplot2)
+plot1 <- qplot(date2, mean.a, geom="histogram", stat="identity")
+
+```
+
+Changing 0 values to mean from that day
+```{r}
+for(j in 1:length(activity$steps)) {    
+       if(is.na(activity$steps[j])) {
+        activity2$steps[j] <- mean.a[[which(date2==activity$date[j])]]
+         }}      
+  
+```
+
+Data set after fixation NA
+
+```{r date21}
+activity2$date <- as.Date(activity2$date, "%Y-%m-%d")
+StepsSum2<-aggregate(steps~date,activity2, sum)
+hist(StepsSum2$steps, xlab="Steps per Day after fix", main="Histogram of Steps per Day")
+```
+
+
+In compare to the first part of the assignment, there is higher freqency of step (doubling) in range from 0 to 5000
+
+```{r}
+mean2 <- mean(StepsSum2$steps, na.rm=T)
+mean2
+median2 <- median(StepsSum2$steps, na.rm=T)
+median2
+```
+
+The values differ from the estimates from the first part of the assignment -> the mean and the median drop down 
+ 
+Plot steps ~ interval
+```{r stepsINT2}
+activity2$interval <- as.factor(activity2$interval)
+stepsINT2 <- aggregate(activity2$steps,list(activity2$interval), mean, na.rm=TRUE)
+names(stepsINT2) <- c("interval", "steps")
+with(stepsINT2, plot(interval, steps, type="l",  xlab="Interval Nr", ylab="Steps", main="Activity"))
+```
+  
+Are there differences in activity patterns between weekdays and weekends?
+
+Preparing variable
+```{r}
+Daytype=ifelse(weekdays(as.Date(activity$date), abbreviate=FALSE) %in% 
+                      c("sobota", "niedziela"), "weekend", "weekday")
+activity2$DayType<-Daytype
+#which(activity2$DayType=="weekend")
+#which(activity2$DayType=="weekday")
+#weekdays(as.Date(activity2$date))
+
+```
+
+Plot activity patterns between weekdays and weekends
+
+```{r}
+stepsPinterval <- aggregate(activity2$steps, by=list(activity2$interval,activity2$DayType), mean)
+names(stepsPinterval) <- c("interval", "day", "steps")
+
+
+library(ggplot2)
+ga<-ggplot(stepsPinterval, aes(interval,steps))
+ga +geom_point() + facet_wrap(~ day, nrow=2)+ labs(y="Number of Steps", title="Steps per Interval")
+```
+
+On weekdays subject weak up earlier then on the weekends. Subject is higher active (the higher value of steps) in the morning in weekdays then in weekends. During the day subject is more active (higher peaks) on the weekends
+
+
